@@ -88,11 +88,6 @@ export default function HeroSlider() {
         }}
       >
         <div className="relative w-full h-full">
-          {/* Animated gradient overlay */}
-          <div
-            className="absolute inset-0 animate-gradient-move bg-[linear-gradient(120deg,#fde3ec_0%,#f76aa6_50%,#a18cd1_100%)] opacity-20 mix-blend-multiply rounded-t-xl rounded-b-2xl z-0"
-            style={{ backgroundSize: '200% 200%' }}
-          />
           <motion.div
             className="w-full flex items-center justify-center aspect-[1.5/1] min-h-[180px] max-h-[260px] sm:aspect-[2.2/1] sm:min-h-[320px] sm:max-h-[420px] lg:aspect-[2.8/1] lg:min-h-[420px] lg:max-h-[650px] xl:max-h-[700px] rounded-2xl sm:rounded-3xl overflow-hidden bg-white"
             style={{

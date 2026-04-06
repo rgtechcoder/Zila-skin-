@@ -28396,9 +28396,20 @@ function ConcernsMultiSelect({ value, onChange }) {
   ] }, opt.slug)) });
 }
 function ConcernsTab() {
+  var _a2, _b2, _c2, _d2;
   const [concerns2, setConcerns] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [form, setForm] = reactExports.useState({ name: "", slug: "", icon: "", description: "" });
+  const handleIconFile = (e) => {
+    var _a3;
+    const file = (_a3 = e.target.files) == null ? void 0 : _a3[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, icon: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
   const [editId, setEditId] = reactExports.useState(null);
   const [deleteConfirm, setDeleteConfirm] = reactExports.useState(null);
   const load = async () => {
@@ -28419,9 +28430,9 @@ function ConcernsTab() {
     setForm({ name: c.name, slug: c.slug, icon: c.icon, description: c.description });
   }
   async function handleSave(e) {
-    var _a2, _b2;
+    var _a3, _b3;
     e.preventDefault();
-    if (!((_a2 = form.name) == null ? void 0 : _a2.trim()) || !((_b2 = form.slug) == null ? void 0 : _b2.trim())) return;
+    if (!((_a3 = form.name) == null ? void 0 : _a3.trim()) || !((_b3 = form.slug) == null ? void 0 : _b3.trim())) return;
     if (editId) {
       await updateConcern(editId, form);
     } else {
@@ -28448,8 +28459,49 @@ function ConcernsTab() {
         /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.slug || "", onChange: (e) => setForm((f) => ({ ...f, slug: e.target.value })), placeholder: "e.g. hydration", required: true })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 w-full", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-medium text-gray-700 mb-1 block", children: "Icon (emoji or image URL)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.icon || "", onChange: (e) => setForm((f) => ({ ...f, icon: e.target.value })), placeholder: "e.g. 💧 or https://..." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-medium text-gray-700 mb-1 block", children: "Icon (emoji, image URL, or upload)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "cursor-pointer inline-flex items-center gap-2 px-3 py-1 bg-brand-accent hover:bg-brand-pink/20 text-brand-pink text-xs font-medium rounded-full border border-brand-pink/30 transition-colors", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Upload Image" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "file",
+                  accept: "image/*",
+                  className: "hidden",
+                  onChange: handleIconFile
+                }
+              )
+            ] }),
+            ((_a2 = form.icon) == null ? void 0 : _a2.startsWith("data:")) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "img",
+              {
+                src: form.icon,
+                alt: "preview",
+                className: "w-8 h-8 rounded object-contain border border-border"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Input,
+            {
+              value: ((_b2 = form.icon) == null ? void 0 : _b2.startsWith("data:")) ? "" : form.icon ?? "",
+              onChange: (e) => setForm((f) => ({ ...f, icon: e.target.value })),
+              placeholder: "e.g. 💧 or https://...",
+              disabled: (_c2 = form.icon) == null ? void 0 : _c2.startsWith("data:")
+            }
+          ),
+          ((_d2 = form.icon) == null ? void 0 : _d2.startsWith("data:")) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setForm((f) => ({ ...f, icon: "" })),
+              className: "text-xs text-red-500 hover:underline self-start",
+              children: "Remove uploaded image"
+            }
+          )
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 w-full", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-medium text-gray-700 mb-1 block", children: "Description" }),
@@ -30388,7 +30440,7 @@ function OffersTab() {
     if (!form.title.trim()) return;
     if (form.active) {
       for (const o of offers) {
-        if (o.id && o.active && o.id !== (editOffer == null ? void 0 : editOffer.id)) {
+        if (o.id && o.active && o.id !== (editOffer == null ? void 0 : editOffer.id) && o.type === form.type) {
           await updateOffer(o.id, { active: false });
         }
       }
@@ -30417,7 +30469,7 @@ function OffersTab() {
     const newActive = !o.active;
     if (newActive) {
       for (const other of offers) {
-        if (other.id && other.active && other.id !== o.id) {
+        if (other.id && other.active && other.id !== o.id && other.type === o.type) {
           await updateOffer(other.id, { active: false });
         }
       }
@@ -31398,355 +31450,98 @@ function Navbar({ currentPage, activeSection }) {
   const searchRef = reactExports.useRef(null);
   const { totalCount } = useCart();
   const { items: wishItems } = useWishlist();
-  const wishCount = wishItems.length;
-  const isLoggedIn = !!localStorage.getItem("zila_user_email");
+  wishItems.length;
+  !!localStorage.getItem("zila_user_email");
   reactExports.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  reactExports.useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => {
-        var _a2;
-        return (_a2 = searchRef.current) == null ? void 0 : _a2.focus();
-      }, 100);
-    }
-  }, [searchOpen]);
   function handleNavClick(e, href) {
     e.preventDefault();
     setMobileOpen(false);
-    if (href === "#shop") {
-      window.location.hash = "#shop";
-      return;
-    }
-    if (href === "#about-page") {
-      window.location.hash = "#about-page";
-      return;
-    }
-    if (currentPage !== "home") {
-      window.location.hash = href;
-      return;
-    }
-    const id2 = href.replace("#", "");
-    if (id2 === "home" || id2 === "") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      window.history.pushState(null, "", "#home");
-      return;
-    }
-    const el = document.getElementById(id2);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      window.history.pushState(null, "", href);
-    }
+    window.location.hash = href;
   }
   function handleLogoClick() {
-    setMobileOpen(false);
-    if (currentPage !== "home") {
-      window.location.hash = "#home";
-      return;
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    window.history.pushState(null, "", "#home");
-  }
-  function handleWishlistClick() {
-    setMobileOpen(false);
-    window.location.hash = "#wishlist";
-  }
-  function handleUserClick() {
-    setMobileOpen(false);
-    window.location.hash = isLoggedIn ? "#dashboard" : "#login";
-  }
-  function isActive(href) {
-    if (href === "#shop") return currentPage === "shop";
-    if (href === "#about-page") return false;
-    if (currentPage !== "home") return false;
-    return activeSection === href.replace("#", "");
+    window.location.hash = "#home";
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "header",
       {
-        className: `top-0 left-0 right-0 z-50 w-full transition-shadow duration-400 font-sans bg-white/95 backdrop-blur-md shadow-[0_2px_24px_rgba(0,0,0,0.09)]`,
-        "data-ocid": "navbar.panel",
-        style: { position: "fixed", top: 0 },
+        className: `fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-white shadow-md" : "bg-white/70 backdrop-blur-md"}`,
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full flex flex-col items-center justify-center px-2 sm:px-4 lg:px-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-row items-center h-16 sm:h-20 lg:h-28 w-full pt-2 sm:pt-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", style: { minWidth: 140, maxWidth: 200, width: 160 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "flex items-center bg-transparent border-0 p-0 cursor-pointer",
-                  "data-ocid": "navbar.link",
-                  onClick: handleLogoClick,
-                  style: { minHeight: 56, width: "100%", alignItems: "center", flexShrink: 0 },
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "img",
-                    {
-                      src: "/logo.png",
-                      alt: "Zila Skin Logo",
-                      className: "object-contain",
-                      style: {
-                        maxWidth: "200px",
-                        maxHeight: "72px",
-                        width: "100%",
-                        height: "auto",
-                        display: "block",
-                        margin: 0
-                      },
-                      sizes: "(min-width: 1024px) 200px, 140px"
-                    }
-                  )
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "hidden lg:flex flex-1 items-center justify-center gap-4 mx-auto", children: navLinks.map((link) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "a",
-                {
-                  href: link.href,
-                  onClick: (e) => handleNavClick(e, link.href),
-                  className: `text-lg lg:text-xl font-semibold transition-colors duration-200 whitespace-nowrap ${isActive(link.href) ? "text-brand-pink font-bold border-b-2 border-brand-pink pb-0.5" : "text-brand-text hover:text-brand-pink"}`,
-                  "data-ocid": "navbar.link",
-                  children: link.label
-                },
-                link.label
-              )) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 lg:gap-5 justify-end", style: { minWidth: 160 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "lg:hidden text-brand-text hover:text-brand-pink transition-colors duration-200 p-1",
-                    onClick: () => setMobileOpen(true),
-                    "data-ocid": "navbar.button",
-                    "aria-label": "Menu",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(Menu, { size: 28 })
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: mobileOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  motion.div,
-                  {
-                    initial: { x: "100%" },
-                    animate: { x: 0 },
-                    exit: { x: "100%" },
-                    transition: { type: "spring", damping: 30, stiffness: 280 },
-                    className: "fixed top-0 right-0 h-full w-64 bg-white z-[999] shadow-2xl flex flex-col p-6",
-                    "data-ocid": "navbar.mobile_drawer",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          className: "self-end mb-6 text-brand-text hover:text-brand-pink",
-                          onClick: () => setMobileOpen(false),
-                          "aria-label": "Close menu",
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 28 })
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col gap-5 mt-4", children: navLinks.map((link) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "a",
-                        {
-                          href: link.href,
-                          onClick: (e) => {
-                            handleNavClick(e, link.href);
-                            setMobileOpen(false);
-                          },
-                          className: `text-lg font-semibold transition-colors duration-200 ${isActive(link.href) ? "text-brand-pink font-bold border-b-2 border-brand-pink pb-0.5" : "text-brand-text hover:text-brand-pink"}`,
-                          "data-ocid": "navbar.mobile_link",
-                          children: link.label
-                        },
-                        link.label
-                      )) })
-                    ]
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setSearchOpen(!searchOpen),
-                    className: "text-brand-text hover:text-brand-pink transition-colors duration-200 p-1",
-                    "data-ocid": "navbar.button",
-                    "aria-label": "Search",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 20 })
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: handleUserClick,
-                    className: `hidden sm:block transition-colors duration-200 p-1 ${isLoggedIn ? "text-brand-pink" : "text-brand-text hover:text-brand-pink"}`,
-                    "data-ocid": "navbar.button",
-                    "aria-label": isLoggedIn ? "My Account" : "Login",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 20 })
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: handleWishlistClick,
-                    className: "hidden sm:flex relative text-brand-text hover:text-brand-pink transition-colors duration-200 p-1 items-center",
-                    "data-ocid": "navbar.button",
-                    "aria-label": "Wishlist",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(Heart, { size: 20 }),
-                      wishCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-0.5 -right-0.5 bg-brand-pink text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center", children: wishCount > 9 ? "9+" : wishCount })
-                    ]
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setCartOpen(true),
-                    className: "relative text-brand-text hover:text-brand-pink transition-colors duration-200 p-1",
-                    "data-ocid": "navbar.button",
-                    "aria-label": "Cart",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingBag, { size: 20 }),
-                      totalCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "absolute -top-2 -right-2 z-10 text-sm font-extrabold rounded-full w-6 h-6 flex items-center justify-center border-2 shadow select-none",
-                          style: { minWidth: 24, minHeight: 24, fontSize: 15, background: "#F1267A", color: "#fff", borderColor: "#F1267A", boxShadow: "0 2px 8px 0 rgba(241,38,122,0.18)" },
-                          children: typeof totalCount === "number" && totalCount > 0 ? totalCount > 99 ? "99+" : totalCount : ""
-                        }
-                      )
-                    ]
-                  }
-                )
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: searchOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              motion.div,
-              {
-                initial: { height: 0, opacity: 0 },
-                animate: { height: "auto", opacity: 1 },
-                exit: { height: 0, opacity: 0 },
-                transition: { duration: 0.25 },
-                className: "overflow-hidden pb-3",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    ref: searchRef,
-                    type: "text",
-                    placeholder: "Search for products, concerns, ingredients…",
-                    className: "w-full border border-border rounded-full px-5 py-2.5 text-sm text-brand-text bg-white focus:outline-none focus:ring-2 focus:ring-brand-pink/30 transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(241,38,122,0.12)]",
-                    "data-ocid": "navbar.search_input",
-                    onKeyDown: (e) => {
-                      if (e.key === "Enter") {
-                        const val = e.target.value.trim();
-                        if (val) {
-                          sessionStorage.setItem("zilaShopSearch", val);
-                          sessionStorage.removeItem("zilaShopCategory");
-                          setSearchOpen(false);
-                          window.location.hash = "#shop";
-                        }
-                      }
-                    },
-                    onChange: (e) => {
-                      const val = e.target.value.trim();
-                      if (val.length >= 2) {
-                        sessionStorage.setItem("zilaShopSearch", val);
-                        sessionStorage.removeItem("zilaShopCategory");
-                      }
-                    }
-                  }
-                )
-              }
-            ) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: mobileOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center h-16 lg:h-20 px-4 lg:px-6 gap-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              motion.div,
+              "div",
               {
-                initial: { opacity: 0 },
-                animate: { opacity: 1 },
-                exit: { opacity: 0 },
-                className: "fixed inset-0 bg-black/40 z-40",
-                onClick: () => setMobileOpen(false)
+                className: "hidden lg:flex items-center cursor-pointer mr-4",
+                onClick: handleLogoClick,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", className: "h-12 w-auto object-contain" })
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              motion.div,
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setMobileOpen(true), className: "lg:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Menu, { size: 26 }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-1/2 -translate-x-1/2 lg:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", className: "h-10 w-auto object-contain" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "hidden lg:flex flex-1 justify-center gap-6 text-sm font-medium", children: navLinks.map((link) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "a",
               {
-                initial: { x: "100%" },
-                animate: { x: 0 },
-                exit: { x: "100%" },
-                transition: { type: "spring", damping: 28, stiffness: 260 },
-                className: "fixed top-0 right-0 h-full w-72 bg-white z-50 shadow-2xl flex flex-col",
-                "data-ocid": "navbar.panel",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-6 py-5 border-b border-border", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "img",
-                      {
-                        src: "/assets/uploads/upscalemedia-transformed_8-019d21a0-d4fc-7717-b25a-5233f768c25c-1.png",
-                        alt: "Zila Skin",
-                        className: "h-10 w-auto object-contain",
-                        style: { maxWidth: "140px" }
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: () => setMobileOpen(false),
-                        className: "text-brand-text-muted hover:text-brand-pink transition-colors duration-200",
-                        "data-ocid": "navbar.close_button",
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 22 })
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col gap-1 px-6 py-6", children: navLinks.map((link) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "a",
-                    {
-                      href: link.href,
-                      className: `flex items-center justify-between py-3 text-base font-medium border-b border-border/50 transition-colors duration-200 ${isActive(link.href) ? "text-brand-pink font-semibold" : "text-brand-text hover:text-brand-pink"}`,
-                      "data-ocid": "navbar.link",
-                      onClick: (e) => handleNavClick(e, link.href),
-                      children: link.label
-                    },
-                    link.label
-                  )) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 px-6 mt-auto pb-8", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: handleUserClick,
-                        className: "flex items-center gap-2 text-sm text-brand-text-muted hover:text-brand-pink transition-colors duration-200",
-                        "data-ocid": "navbar.button",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 18 }),
-                          " ",
-                          isLoggedIn ? "My Account" : "Login"
-                        ]
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: handleWishlistClick,
-                        className: "relative flex items-center gap-2 text-sm text-brand-text-muted hover:text-brand-pink transition-colors duration-200",
-                        "data-ocid": "navbar.button",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(Heart, { size: 18 }),
-                          "Wishlist",
-                          wishCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-brand-pink text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center", children: wishCount })
-                        ]
-                      }
-                    )
-                  ] })
-                ]
-              }
-            )
-          ] }) })
+                href: link.href,
+                onClick: (e) => handleNavClick(e, link.href),
+                className: "relative text-brand-text hover:text-brand-pink",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "relative group", children: [
+                  link.label,
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-0 -bottom-1 h-[2px] w-0 bg-brand-pink transition-all duration-300 group-hover:w-full" })
+                ] })
+              },
+              link.label
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 ml-auto", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 20, className: "hidden lg:block" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 20, className: "hidden lg:block" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Heart, { size: 20, className: "hidden lg:block" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setCartOpen(true), className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingBag, { size: 20 }),
+                totalCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-2 -right-2 text-xs bg-pink-500 text-white w-5 h-5 flex items-center justify-center rounded-full", children: totalCount })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: searchOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { className: "px-4 pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              ref: searchRef,
+              type: "text",
+              placeholder: "Search...",
+              className: "w-full border rounded-full px-4 py-2"
+            }
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: mobileOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              className: "fixed top-0 left-0 w-full h-full z-[9999]",
+              style: { background: "#fff", minHeight: "100vh", minWidth: "100vw" },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 border-b", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(X, { onClick: () => setMobileOpen(false) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", className: "h-10" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col p-6 gap-4", children: navLinks.map((link) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "a",
+                  {
+                    href: link.href,
+                    onClick: (e) => handleNavClick(e, link.href),
+                    className: "text-lg font-medium text-brand-text hover:text-brand-pink transition-colors duration-200",
+                    children: link.label
+                  },
+                  link.label
+                )) })
+              ]
+            }
+          ) })
         ]
       }
     ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-16 lg:mt-20" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(CartDrawer, { open: cartOpen, onClose: () => setCartOpen(false) })
   ] });
 }
@@ -37847,39 +37642,30 @@ function HeroSlider() {
               paddingTop: "0"
             },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full h-full", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute inset-0 animate-gradient-move bg-[linear-gradient(120deg,#fde3ec_0%,#f76aa6_50%,#a18cd1_100%)] opacity-20 mix-blend-multiply rounded-t-xl rounded-b-2xl z-0",
-                    style: { backgroundSize: "200% 200%" }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.div,
-                  {
-                    className: "w-full flex items-center justify-center aspect-[1.5/1] min-h-[180px] max-h-[260px] sm:aspect-[2.2/1] sm:min-h-[320px] sm:max-h-[420px] lg:aspect-[2.8/1] lg:min-h-[420px] lg:max-h-[650px] xl:max-h-[700px] rounded-2xl sm:rounded-3xl overflow-hidden bg-white",
-                    style: {
-                      boxShadow: "0 8px 48px 0 rgba(241,38,122,0.10)",
-                      width: "100vw",
-                      maxWidth: "100vw"
-                    },
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      motion.img,
-                      {
-                        src: slide.imageUrl,
-                        alt: slide.headline,
-                        className: "w-full h-full object-cover rounded-2xl sm:rounded-3xl",
-                        style: { background: "#fff" },
-                        loading: "eager",
-                        initial: { scale: 0.98, opacity: 0 },
-                        animate: { scale: 1, opacity: 1 },
-                        transition: { duration: 0.7, ease: "easeOut" }
-                      }
-                    )
-                  }
-                )
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-full h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                motion.div,
+                {
+                  className: "w-full flex items-center justify-center aspect-[1.5/1] min-h-[180px] max-h-[260px] sm:aspect-[2.2/1] sm:min-h-[320px] sm:max-h-[420px] lg:aspect-[2.8/1] lg:min-h-[420px] lg:max-h-[650px] xl:max-h-[700px] rounded-2xl sm:rounded-3xl overflow-hidden bg-white",
+                  style: {
+                    boxShadow: "0 8px 48px 0 rgba(241,38,122,0.10)",
+                    width: "100vw",
+                    maxWidth: "100vw"
+                  },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    motion.img,
+                    {
+                      src: slide.imageUrl,
+                      alt: slide.headline,
+                      className: "w-full h-full object-cover rounded-2xl sm:rounded-3xl",
+                      style: { background: "#fff" },
+                      loading: "eager",
+                      initial: { scale: 0.98, opacity: 0 },
+                      animate: { scale: 1, opacity: 1 },
+                      transition: { duration: 0.7, ease: "easeOut" }
+                    }
+                  )
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
