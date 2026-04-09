@@ -1,9 +1,10 @@
-import { useProducts } from "@/hooks/useProducts";
+import { useBestsellers } from "@/hooks/useBestsellers";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef } from "react";
 import ProductCard from "./ProductCard";
 import type { Product } from "./ProductCard";
+
 
 function SkeletonCard() {
   return (
@@ -18,11 +19,9 @@ function SkeletonCard() {
   );
 }
 
-
-
-export default function BestsellersSection() {
+function BestsellersSection() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { products, loading } = useProducts();
+  const { bestsellers, loading } = useBestsellers();
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
@@ -33,106 +32,23 @@ export default function BestsellersSection() {
     }
   };
 
+  // bestsellers already filtered by hook
 
-  // Only show static BS images from public folder
-  const staticBS = [
-    {
-      id: 1001,
-      name: "Barrier Repair Cream",
-      desc: "Barrier Repair Cream",
-      price: 499,
-      originalPrice: 599,
-      rating: 4.7,
-      reviews: 120,
-      imageSeed: "bs-barrier-repair-cream",
-      imageUrl: "/BS barrier repair cream.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1002,
-      name: "Glutathione Cleanser",
-      desc: "Glutathione Cleanser",
-      price: 399,
-      originalPrice: 499,
-      rating: 4.8,
-      reviews: 98,
-      imageSeed: "bs-glutathyone-cleanser",
-      imageUrl: "/BS glutathyone cleanser.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1003,
-      name: "Grape Seed Body Lotion",
-      desc: "Grape Seed Body Lotion",
-      price: 349,
-      originalPrice: 449,
-      rating: 4.6,
-      reviews: 87,
-      imageSeed: "bs-grape-seed-body-lotion",
-      imageUrl: "/BS grape seed body lotion.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1004,
-      name: "Rice Water Toner",
-      desc: "Rice Water Toner",
-      price: 299,
-      originalPrice: 399,
-      rating: 4.5,
-      reviews: 65,
-      imageSeed: "bs-rice-water-toner",
-      imageUrl: "/BS rice water toner.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1005,
-      name: "Serum",
-      desc: "Serum",
-      price: 599,
-      originalPrice: 699,
-      rating: 4.9,
-      reviews: 150,
-      imageSeed: "bs-serum",
-      imageUrl: "/BS serum.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1006,
-      name: "Skin Brightening Cream",
-      desc: "Skin Brightening Cream",
-      price: 499,
-      originalPrice: 599,
-      rating: 4.7,
-      reviews: 110,
-      imageSeed: "bs-skin-brightening-cream",
-      imageUrl: "/BS skin brightinging cream.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1007,
-      name: "Vitamin C Cleanser",
-      desc: "Vitamin C Cleanser",
-      price: 399,
-      originalPrice: 499,
-      rating: 4.8,
-      reviews: 105,
-      imageSeed: "bs-vitamin-c-cleanser",
-      imageUrl: "/BS vitamin c cleanser.jpg",
-      badge: "Bestseller",
-    },
-    {
-      id: 1008,
-      name: "Vitamin C Sunscreen",
-      desc: "Vitamin C Sunscreen",
-      price: 349,
-      originalPrice: 449,
-      rating: 4.6,
-      reviews: 90,
-      imageSeed: "bs-vitamin-c-sunscreen",
-      imageUrl: "/BS vitamin c sunscreen.jpg",
-      badge: "Bestseller",
-    },
-  ];
+  // Map FirestoreProduct to ProductCard type
+  function mapToProductCard(p: any, i: number) {
+    return {
+      id: p.id || i,
+      name: p.name,
+      desc: p.description || p.desc || "",
+      price: p.price,
+      originalPrice: p.originalPrice,
+      rating: p.rating ?? 5,
+      reviews: p.reviews ?? 0,
+      imageSeed: p.id || p.name || String(i),
+      imageUrl: p.bestsellerImage || p.imageUrl,
+      badge: p.badge || "Bestseller",
+    };
+  }
 
   return (
     <section
@@ -176,8 +92,8 @@ export default function BestsellersSection() {
 
         {/* Mobile: 2-column grid */}
         <div className="grid grid-cols-2 gap-3 sm:hidden">
-          {staticBS.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i + 1} />
+          {bestsellers.map((p, i) => (
+            <ProductCard key={p.id || i} product={mapToProductCard(p, i)} index={i + 1} />
           ))}
         </div>
 
@@ -186,12 +102,12 @@ export default function BestsellersSection() {
           ref={scrollRef}
           className="hidden sm:flex gap-5 overflow-x-auto scrollbar-hide pb-2"
         >
-          {staticBS.map((p, i) => (
+          {bestsellers.map((p, i) => (
             <div
-              key={p.id}
+              key={p.id || i}
               className="min-w-[220px] sm:min-w-[240px] lg:min-w-[260px] flex-shrink-0"
             >
-              <ProductCard product={p} index={i + 1} />
+              <ProductCard product={mapToProductCard(p, i)} index={i + 1} />
             </div>
           ))}
         </div>
@@ -199,3 +115,5 @@ export default function BestsellersSection() {
     </section>
   );
 }
+
+export default BestsellersSection;

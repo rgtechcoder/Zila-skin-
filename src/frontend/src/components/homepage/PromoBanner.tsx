@@ -13,13 +13,15 @@ export default function PromoBanner() {
           className="relative overflow-hidden rounded-3xl w-full"
           style={{
             background:
-              "linear-gradient(135deg, #FDE3EC 0%, #F76AA6 60%, #F1267A 100%)",
+              "radial-gradient(ellipse at 60% 40%, #fffbe9 0%, #ffe0f7 60%, #e0c3fc 100%)",
           }}
         >
-          {/* Decorative blobs - clipped by overflow-hidden on parent */}
-          <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/3" />
-          <div className="absolute bottom-0 left-0 w-56 h-56 rounded-full bg-white/10 translate-y-1/3 -translate-x-1/3" />
-          <div className="absolute top-1/2 left-1/4 w-32 h-32 rounded-full bg-brand-pink/20" />
+          {/* Decorative luxury blobs */}
+          <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[#e0c3fc]/40 blur-2xl animate-blob1" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 rounded-full bg-[#ffe0f7]/40 blur-2xl animate-blob2" />
+          {/* Animated gold blob for premium shine */}
+          <div className="absolute left-1/3 top-2/3 w-60 h-60 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ffe066]/30 blur-3xl animate-blob3 z-0" />
+
 
           <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6 px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
             {/* Left image with floating animation */}
@@ -42,28 +44,39 @@ export default function PromoBanner() {
             >
               <div className="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4]">
                 <img
-                  src="product - Barrier Repair cleaneser.jpg"
+                  src="lab&leaf1.jpg"
                   alt="Barrier Repair Cleanser"
                   className="w-full h-full object-cover"
                 />
               </div>
             </motion.div>
 
-            {/* Center text */}
-            <div className="flex flex-col items-center text-center gap-4 flex-1">
-              <span className="text-white/80 text-xs font-semibold tracking-[0.2em] uppercase">
+            {/* Center text with overlay for readability */}
+            <div className="flex flex-col items-center text-center gap-4 flex-1 relative z-10">
+              {/* Overlay behind text for contrast */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-full max-h-80 bg-white/70 backdrop-blur-sm rounded-2xl -z-10" />
+              <span
+                className="text-neutral-800 text-xs font-semibold tracking-[0.2em] uppercase"
+                style={{ textShadow: '0 2px 16px rgba(255,255,255,0.18), 0 1px 1px rgba(255,255,255,0.10)' }}
+              >
                 Science Meets Nature
               </span>
-              <h2 className="font-serif text-3xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight whitespace-pre-line">
+              <h2
+                className="font-serif text-3xl sm:text-4xl lg:text-6xl font-bold text-neutral-900 leading-tight whitespace-pre-line"
+                style={{ textShadow: '0 2px 16px rgba(255,255,255,0.18), 0 1px 1px rgba(255,255,255,0.10)' }}
+              >
                 {"Lab & Leaf\nby Zila Skin"}
               </h2>
-              <p className="text-white/85 text-sm sm:text-base max-w-md leading-relaxed">
+              <p
+                className="text-neutral-700 text-sm sm:text-base max-w-md leading-relaxed"
+                style={{ textShadow: '0 2px 16px rgba(255,255,255,0.18), 0 1px 1px rgba(255,255,255,0.10)' }}
+              >
                 Science-backed formulas crafted with botanical extracts —
                 Vitamin C, Niacinamide, Glutathione & more. Visible results from
                 day one.
               </p>
               <a
-                href="/"
+                href="#shop"
                 className="inline-flex items-center gap-2.5 bg-white text-brand-pink font-bold text-sm px-8 py-3.5 rounded-full hover:bg-brand-bg transition-all duration-300 hover:scale-105 group"
                 data-ocid="promo.primary_button"
               >
@@ -95,7 +108,7 @@ export default function PromoBanner() {
             >
               <div className="rounded-2xl overflow-hidden shadow-2xl aspect-[3/4]">
                 <img
-                  src="product - vitamin c serum.jpg"
+                  src="lab&leaf2.jpg"
                   alt="Vitamin C Brightening Serum"
                   className="w-full h-full object-cover"
                 />

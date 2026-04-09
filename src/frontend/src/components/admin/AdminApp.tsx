@@ -1,3 +1,6 @@
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { GripVertical } from "lucide-react";
+// (duplicate import removed)
 
 
 
@@ -75,11 +78,7 @@ import { useEffect, useState } from "react";
 
 
 // ---- Multi-select for Concerns ----
-function ConcernsMultiSelect({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
-  const [options, setOptions] = useState<{ slug: string; name: string }[]>([]);
-  useEffect(() => {
-    getConcerns().then(cs => setOptions(cs.map(c => ({ slug: c.slug, name: c.name }))));
-  }, []);
+function ConcernsMultiSelect({ value, onChange, options }: { value: string[]; onChange: (v: string[]) => void; options: { slug: string; name: string }[] }) {
   function toggle(slug: string) {
     if (value.includes(slug)) onChange(value.filter(v => v !== slug));
     else onChange([...value, slug]);
@@ -119,13 +118,35 @@ type AdminTab =
   | "categories"
   | "orders"
   | "coupons"
-  | "announcements"
   | "settings"
   | "users"
   | "offers"
   | "concerns";
 
 function ConcernsTab() {
+    // Ensure concerns have an order field
+    function getSortedConcerns(cs: FirestoreConcern[]) {
+      return [...cs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+
+    // Save new order to storage
+    async function saveOrder(newCs: FirestoreConcern[]) {
+      // Assign order field based on array index
+      const updated = newCs.map((c, i) => ({ ...c, order: i }));
+      // Save all
+      updated.forEach(async (concern) => {
+        if (concern.id) await updateConcern(concern.id, { order: concern.order });
+      });
+      setConcerns(updated);
+    }
+
+    function handleDragEnd(result: any) {
+      if (!result.destination) return;
+      const items = getSortedConcerns(concerns);
+      const [removed] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, removed);
+      saveOrder(items);
+    }
   const [concerns, setConcerns] = useState<FirestoreConcern[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Partial<FirestoreConcern>>({ name: "", slug: "", icon: "", description: "" });
@@ -231,10 +252,7 @@ function ConcernsTab() {
                 )}
               </div>
             </div>
-            <div className="flex-1 w-full">
-              <Label className="text-xs font-medium text-gray-700 mb-1 block">Description</Label>
-              <Input value={form.description || ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Quench dry skin" />
-            </div>
+            {/* Description field removed as per request */}
             <Button type="submit" className="bg-gradient-to-r from-[#F1267A] to-[#9B59B6] text-white hover:opacity-90 active:scale-95 shadow-sm transition-all duration-200">
               {editId ? "Update" : "Add"}
             </Button>
@@ -249,49 +267,82 @@ function ConcernsTab() {
           {loading ? (
             <div className="p-8 text-center text-gray-400">Loading…</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Icon</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {concerns.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-400 py-8">No concerns yet.</TableCell>
-                  </TableRow>
-                ) : (
-                  concerns.map((c, i) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium text-sm max-w-[120px] truncate">{c.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{c.slug}</TableCell>
-                      <TableCell>{c.icon}</TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate">{c.description}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(c)}>Edit</Button>
-                        <Button size="sm" variant="destructive" className="ml-2" onClick={() => setDeleteConfirm(c.id!)}>Delete</Button>
-                        {deleteConfirm === c.id && (
-                          <Dialog open onOpenChange={() => setDeleteConfirm(null)}>
-                            <DialogContent>
-                              <DialogHeader><DialogTitle>Delete Concern?</DialogTitle></DialogHeader>
-                              <div>Are you sure you want to delete <b>{c.name}</b>?</div>
-                              <div className="flex gap-2 mt-4 justify-end">
-                                <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-                                <Button variant="destructive" onClick={() => handleDelete(c.id!)}>Delete</Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="concerns-droppable">
+                {(provided) => (
+                  <Table
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                  >
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead></TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Icon</TableHead>
+                        {/* <TableHead>Description</TableHead> */}
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getSortedConcerns(concerns).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-gray-400 py-8">No concerns yet.</TableCell>
+                        </TableRow>
+                      ) : (
+                        getSortedConcerns(concerns).map((c, i) => (
+                          <Draggable key={c.id} draggableId={c.id ?? String(i)} index={i}>
+                            {(provided, snapshot) => (
+                              <TableRow
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  background: snapshot.isDragging ? '#f3e8ff' : undefined,
+                                }}
+                              >
+                                <TableCell {...provided.dragHandleProps} className="cursor-grab text-gray-400">
+                                  <GripVertical size={18} />
+                                </TableCell>
+                                <TableCell className="font-medium text-sm max-w-[120px] truncate">{c.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{c.slug}</TableCell>
+                                <TableCell>
+                                  {c.icon && (c.icon.startsWith('data:') || c.icon.startsWith('http')) ? (
+                                    <img src={c.icon} alt={c.name} className="w-7 h-7 object-contain inline-block align-middle" />
+                                  ) : c.icon ? (
+                                    c.icon
+                                  ) : (
+                                    <span className="text-gray-300">—</span>
+                                  )}
+                                </TableCell>
+                                {/* <TableCell className="text-xs max-w-[200px] truncate">{c.description}</TableCell> */}
+                                <TableCell className="text-right">
+                                  <Button size="sm" variant="outline" onClick={() => handleEdit(c)}>Edit</Button>
+                                  <Button size="sm" variant="destructive" className="ml-2" onClick={() => setDeleteConfirm(c.id!)}>Delete</Button>
+                                  {deleteConfirm === c.id && (
+                                    <Dialog open onOpenChange={() => setDeleteConfirm(null)}>
+                                      <DialogContent>
+                                        <DialogHeader><DialogTitle>Delete Concern?</DialogTitle></DialogHeader>
+                                        <div>Are you sure you want to delete <b>{c.name}</b>?</div>
+                                        <div className="flex gap-2 mt-4 justify-end">
+                                          <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+                                          <Button variant="destructive" onClick={() => handleDelete(c.id!)}>Delete</Button>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </TableBody>
+                  </Table>
                 )}
-              </TableBody>
-            </Table>
+              </Droppable>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
@@ -795,14 +846,48 @@ function ProductFormModal({
     reviews: 0,
     showsIn: [],
   };
-  const [form, setForm] = useState<Omit<FirestoreProduct, "id">>(
-    initial ? { ...initial } : empty,
-  );
+  const [form, setForm] = useState<Omit<FirestoreProduct, "id"> & {
+    bestsellerImage?: string;
+    newLaunchImage?: string;
+  }>(initial ? { ...initial } : empty);
+
+  // Handle Bestseller and New Launch image uploads
+  const handleBestsellerImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, bestsellerImage: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+  const handleNewLaunchImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, newLaunchImage: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+  const [concernsOptions, setConcernsOptions] = useState<{ slug: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setForm(initial ? { ...initial } : empty);
-  }, [initial]);
+    let f = initial ? { ...initial } : empty;
+    // Normalize showsIn for edit: if either 'newlaunch' or 'new-launch' is present, ensure both are present
+    let showsIn = f.showsIn ?? [];
+    if (showsIn.includes("newlaunch") && !showsIn.includes("new-launch")) {
+      showsIn = [...showsIn, "new-launch"];
+    }
+    if (showsIn.includes("new-launch") && !showsIn.includes("newlaunch")) {
+      showsIn = [...showsIn, "newlaunch"];
+    }
+    setForm({ ...f, showsIn });
+    if (open) {
+      getConcerns().then(cs => setConcernsOptions(cs.map(c => ({ slug: c.slug, name: c.name }))));
+    }
+  }, [initial, open]);
 
   const f =
     (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -839,6 +924,7 @@ function ProductFormModal({
     setSaving(true);
     try {
       await onSave(form);
+      setForm(empty); // Reset form after save
       onClose();
     } finally {
       setSaving(false);
@@ -966,12 +1052,36 @@ function ProductFormModal({
             </div>
             <div>
               <Label className="text-xs font-medium">Badge</Label>
-              <Input
-                value={form.badge ?? ""}
-                onChange={f("badge")}
-                placeholder="Bestseller / New"
-                data-ocid="admin.input"
-              />
+              <div className="flex flex-col gap-1">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(form.badge) && form.badge.includes("Bestseller")}
+                    onChange={e => {
+                      setForm(f => ({
+                        ...f,
+                        badge: e.target.checked
+                          ? [...(Array.isArray(f.badge) ? f.badge : []), "Bestseller"]
+                          : (Array.isArray(f.badge) ? f.badge.filter(b => b !== "Bestseller") : [])
+                      }));
+                    }}
+                  /> Bestseller
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(form.badge) && form.badge.includes("New")}
+                    onChange={e => {
+                      setForm(f => ({
+                        ...f,
+                        badge: e.target.checked
+                          ? [...(Array.isArray(f.badge) ? f.badge : []), "New"]
+                          : (Array.isArray(f.badge) ? f.badge.filter(b => b !== "New") : [])
+                      }));
+                    }}
+                  /> New Launch
+                </label>
+              </div>
             </div>
             <div>
               <Label className="text-xs font-medium">Skin Type</Label>
@@ -984,9 +1094,13 @@ function ProductFormModal({
             </div>
             <div>
               <Label className="text-xs font-medium">Concerns</Label>
-              <ConcernsMultiSelect value={form.concerns ?? []} onChange={concerns => setForm(f => ({ ...f, concerns }))} />
+              <ConcernsMultiSelect
+                value={form.concerns ?? []}
+                onChange={concerns => setForm(f => ({ ...f, concerns }))}
+                options={concernsOptions}
+              />
             </div>
-            // ---- Multi-select for Concerns ----
+            ---- Multi-select for Concerns ----
             <div>
               <Label className="text-xs font-medium">Rating</Label>
               <Input
@@ -1012,18 +1126,19 @@ function ProductFormModal({
           <div>
             <Label className="text-xs font-medium mb-2 block">Show In</Label>
             <div className="flex gap-4">
-              {[
-                { label: "All Products", value: "all" },
-                { label: "Bestsellers", value: "bestseller" },
-                { label: "New Launches", value: "new-launch" },
-              ].map(({ label, value }) => (
+              {/* Check for both 'newlaunch' and 'new-launch' for New Launches */}
+              {[{ label: "All Products", value: "all" }, { label: "Bestsellers", value: "bestseller" }, { label: "New Launches", value: "new-launch" }].map(({ label, value }) => (
                 <label
                   key={value}
                   className="flex items-center gap-2 cursor-pointer text-sm"
                 >
                   <input
                     type="checkbox"
-                    checked={(form.showsIn ?? []).includes(value)}
+                    checked={
+                      value === "new-launch"
+                        ? (form.showsIn ?? []).includes("new-launch") || (form.showsIn ?? []).includes("newlaunch")
+                        : (form.showsIn ?? []).includes(value)
+                    }
                     onChange={() => toggleShowsIn(value)}
                     className="rounded border-border accent-[#F1267A]"
                     data-ocid="admin.checkbox"
@@ -1032,6 +1147,71 @@ function ProductFormModal({
                 </label>
               ))}
             </div>
+            {/* Conditional image uploaders for Bestseller and New Launches */}
+            {(form.showsIn ?? []).includes("bestseller") && (
+              <div className="mt-2">
+                <Label className="text-xs font-medium">Bestseller Image (optional)</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-brand-accent hover:bg-brand-pink/20 text-brand-pink text-xs font-medium rounded-full border border-brand-pink/30 transition-colors">
+                    <span>Upload Bestseller Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBestsellerImageFile}
+                    />
+                  </label>
+                  {form.bestsellerImage?.startsWith("data:") && (
+                    <img
+                      src={form.bestsellerImage}
+                      alt="bestseller preview"
+                      className="w-12 h-12 rounded-lg object-contain border border-border"
+                    />
+                  )}
+                  {form.bestsellerImage?.startsWith("data:") && (
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, bestsellerImage: "" }))}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {(form.showsIn ?? []).includes("new-launch") && (
+              <div className="mt-2">
+                <Label className="text-xs font-medium">New Launch Image (optional)</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-brand-accent hover:bg-brand-pink/20 text-brand-pink text-xs font-medium rounded-full border border-brand-pink/30 transition-colors">
+                    <span>Upload New Launch Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleNewLaunchImageFile}
+                    />
+                  </label>
+                  {form.newLaunchImage?.startsWith("data:") && (
+                    <img
+                      src={form.newLaunchImage}
+                      alt="new launch preview"
+                      className="w-12 h-12 rounded-lg object-contain border border-border"
+                    />
+                  )}
+                  {form.newLaunchImage?.startsWith("data:") && (
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, newLaunchImage: "" }))}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button
@@ -1059,6 +1239,29 @@ function ProductFormModal({
 
 // ---- Products Tab ----
 function ProductsTab() {
+    // Ensure products have an order field
+    function getSortedProducts(prods: FirestoreProduct[]) {
+      return [...prods].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+
+    // Save new order to storage
+    async function saveOrder(newProds: FirestoreProduct[]) {
+      // Assign order field based on array index
+      const updated = newProds.map((p, i) => ({ ...p, order: i }));
+      // Save all
+      updated.forEach(async (prod) => {
+        if (prod.id) await updateProduct(prod.id, { order: prod.order });
+      });
+      setProducts(updated);
+    }
+
+    function handleDragEnd(result: any) {
+      if (!result.destination) return;
+      const items = getSortedProducts(products);
+      const [removed] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, removed);
+      saveOrder(items);
+    }
   const [products, setProducts] = useState<FirestoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1084,10 +1287,25 @@ function ProductsTab() {
   }, []);
 
   async function handleSave(p: Omit<FirestoreProduct, "id">) {
+    // Guarantee both 'newlaunch' and 'new-launch' are present if either is selected
+    let showsIn = p.showsIn ?? [];
+    if (showsIn.includes("newlaunch") && !showsIn.includes("new-launch")) {
+      showsIn = [...showsIn, "new-launch"];
+    }
+    if (showsIn.includes("new-launch") && !showsIn.includes("newlaunch")) {
+      showsIn = [...showsIn, "newlaunch"];
+    }
+    // PATCH: badge as array for multi-badge support
+    let badge = p.badge;
+    if (!Array.isArray(badge)) {
+      badge = badge ? [badge] : [];
+    }
+    // Always save custom images if present
+    const productToSave = { ...p, showsIn, badge };
     if (editProduct?.id) {
-      await updateProduct(editProduct.id, p);
+      await updateProduct(editProduct.id, productToSave);
     } else {
-      await addProduct(p);
+      await addProduct(productToSave);
     }
     await load();
   }
@@ -1125,87 +1343,117 @@ function ProductsTab() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="w-14">Image</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Badge</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center text-gray-400 py-8"
-                        data-ocid="admin.empty_state"
-                      >
-                        No products. Add your first product.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    products.map((p, i) => (
-                      <TableRow key={p.id} data-ocid={`admin.row.${i + 1}`}>
-                        <TableCell>
-                          <img
-                            src={p.imageUrl}
-                            alt={p.name}
-                            className="w-10 h-10 object-contain rounded-lg bg-gray-100"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-sm max-w-[160px] truncate">
-                          {p.name}
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {p.category}
-                        </TableCell>
-                        <TableCell className="text-sm font-semibold">
-                          ₹{p.price}
-                        </TableCell>
-                        <TableCell className="text-sm">{p.stock}</TableCell>
-                        <TableCell>
-                          {p.badge ? (
-                            <Badge variant="secondary" className="text-xs">
-                              {p.badge}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-300 text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditProduct(p);
-                                setModalOpen(true);
-                              }}
-                              data-ocid={`admin.edit_button.${i + 1}`}
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="products-droppable">
+                  {(provided) => (
+                    <Table
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead></TableHead>
+                          <TableHead className="w-14">Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead>Badge</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {getSortedProducts(products).length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              className="text-center text-gray-400 py-8"
+                              data-ocid="admin.empty_state"
                             >
-                              <Pencil size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => setDeleteConfirm(p.id ?? "")}
-                              data-ocid={`admin.delete_button.${i + 1}`}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                              No products. Add your first product.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          getSortedProducts(products).map((p, i) => (
+                            <Draggable key={p.id} draggableId={p.id ?? String(i)} index={i}>
+                              {(provided, snapshot) => (
+                                <TableRow
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    background: snapshot.isDragging ? '#f3e8ff' : undefined,
+                                  }}
+                                  data-ocid={`admin.row.${i + 1}`}
+                                >
+                                  <TableCell {...provided.dragHandleProps} className="cursor-grab text-gray-400">
+                                    <GripVertical size={18} />
+                                  </TableCell>
+                                  <TableCell>
+                                    <img
+                                      src={p.imageUrl}
+                                      alt={p.name}
+                                      className="w-10 h-10 object-contain rounded-lg bg-gray-100"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="font-medium text-sm max-w-[160px] truncate">
+                                    {p.name}
+                                  </TableCell>
+                                  <TableCell className="text-sm text-gray-600">
+                                    {p.category}
+                                  </TableCell>
+                                  <TableCell className="text-sm font-semibold">
+                                    ₹{p.price}
+                                  </TableCell>
+                                  <TableCell className="text-sm">{p.stock}</TableCell>
+                                  <TableCell>
+                                    {Array.isArray(p.badge)
+                                      ? p.badge.map((b, i) => (
+                                          <Badge key={b + i} variant="secondary" className="text-xs mr-1">
+                                            {b}
+                                          </Badge>
+                                        ))
+                                      : p.badge ? (
+                                          <Badge variant="secondary" className="text-xs">{p.badge}</Badge>
+                                        ) : (
+                                          <span className="text-gray-300 text-xs">-</span>
+                                        )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditProduct(p);
+                                          setModalOpen(true);
+                                        }}
+                                        data-ocid={`admin.edit_button.${i + 1}`}
+                                      >
+                                        <Pencil size={14} />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                        onClick={() => setDeleteConfirm(p.id ?? "")}
+                                        data-ocid={`admin.delete_button.${i + 1}`}
+                                      >
+                                        <Trash2 size={14} />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </Draggable>
+                          ))
+                        )}
+                        {provided.placeholder}
+                      </TableBody>
+                    </Table>
                   )}
-                </TableBody>
-              </Table>
+                </Droppable>
+              </DragDropContext>
             </div>
           )}
         </CardContent>
@@ -1254,6 +1502,29 @@ function ProductsTab() {
 
 // ---- Categories Tab ----
 function CategoriesTab() {
+    // Ensure categories have an order field
+    function getSortedCategories(cats: FirestoreCategory[]) {
+      return [...cats].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+
+    // Save new order to storage
+    async function saveOrder(newCats: FirestoreCategory[]) {
+      // Assign order field based on array index
+      const updated = newCats.map((c, i) => ({ ...c, order: i }));
+      // Save all
+      updated.forEach(async (cat) => {
+        if (cat.id) await updateCategory(cat.id, { order: cat.order });
+      });
+      setCategories(updated);
+    }
+
+    function handleDragEnd(result: any) {
+      if (!result.destination) return;
+      const items = getSortedCategories(categories);
+      const [removed] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, removed);
+      saveOrder(items);
+    }
   const [categories, setCategories] = useState<FirestoreCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -1384,74 +1655,100 @@ function CategoriesTab() {
               Loading…
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead>Image</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-gray-400 py-8"
-                      data-ocid="admin.empty_state"
-                    >
-                      No categories yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  categories.map((c, i) => (
-                    <TableRow key={c.id} data-ocid={`admin.row.${i + 1}`}>
-                      <TableCell>
-                        {c.imageUrl ? (
-                          <img
-                            src={c.imageUrl}
-                            alt={c.name}
-                            className="w-10 h-10 rounded-lg object-cover border border-gray-100"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FDE3EC] to-[#F3D0FF]" />
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-gray-500 text-sm font-mono">
-                        {c.slug}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditId(c.id ?? "");
-                              setName(c.name);
-                              setImageUrl(c.imageUrl ?? "");
-                            }}
-                            data-ocid={`admin.edit_button.${i + 1}`}
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="categories-droppable">
+                {(provided) => (
+                  <Table
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                  >
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead></TableHead>
+                        <TableHead>Image</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getSortedCategories(categories).length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center text-gray-400 py-8"
+                            data-ocid="admin.empty_state"
                           >
-                            <Pencil size={14} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => setDeleteConfirm(c.id ?? "")}
-                            data-ocid={`admin.delete_button.${i + 1}`}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            No categories yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getSortedCategories(categories).map((c, i) => (
+                          <Draggable key={c.id} draggableId={c.id ?? String(i)} index={i}>
+                            {(provided, snapshot) => (
+                              <TableRow
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  background: snapshot.isDragging ? '#f3e8ff' : undefined,
+                                }}
+                                data-ocid={`admin.row.${i + 1}`}
+                              >
+                                <TableCell {...provided.dragHandleProps} className="cursor-grab text-gray-400">
+                                  <GripVertical size={18} />
+                                </TableCell>
+                                <TableCell>
+                                  {c.imageUrl ? (
+                                    <img
+                                      src={c.imageUrl}
+                                      alt={c.name}
+                                      className="w-10 h-10 rounded-lg object-cover border border-gray-100"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FDE3EC] to-[#F3D0FF]" />
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium">{c.name}</TableCell>
+                                <TableCell className="text-gray-500 text-sm font-mono">
+                                  {c.slug}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditId(c.id ?? "");
+                                        setName(c.name);
+                                        setImageUrl(c.imageUrl ?? "");
+                                      }}
+                                      data-ocid={`admin.edit_button.${i + 1}`}
+                                    >
+                                      <Pencil size={14} />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                      onClick={() => setDeleteConfirm(c.id ?? "")}
+                                      data-ocid={`admin.delete_button.${i + 1}`}
+                                    >
+                                      <Trash2 size={14} />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </TableBody>
+                  </Table>
                 )}
-              </TableBody>
-            </Table>
+              </Droppable>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
@@ -2488,6 +2785,13 @@ function OffersTab() {
         active: form.active,
       });
     }
+    setForm({
+      title: "",
+      description: "",
+      couponCode: "",
+      type: "banner",
+      active: true,
+    }); // Reset offer form
     setDialogOpen(false);
     await load();
   }
@@ -2642,21 +2946,7 @@ function OffersTab() {
                 data-ocid="admin.input"
               />
             </div>
-            <div>
-              <Label className="text-xs font-medium text-gray-700 mb-1 block">
-                Description
-              </Label>
-              <textarea
-                value={form.description}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, description: e.target.value }))
-                }
-                placeholder="Short description of the offer"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#F1267A]/30"
-                rows={3}
-                data-ocid="admin.textarea"
-              />
-            </div>
+            {/* Description field removed from Offer form as per request */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-medium text-gray-700 mb-1 block">
@@ -2804,7 +3094,7 @@ export default function AdminApp() {
     { id: "categories", label: "Categories", icon: Layers },
     { id: "orders", label: "Orders", icon: Package },
     { id: "coupons", label: "Coupons", icon: Tag },
-    { id: "announcements", label: "Announcements", icon: Megaphone },
+    // { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "users", label: "Users", icon: Users },
     { id: "offers", label: "Offers", icon: Megaphone },
     { id: "concerns", label: "Concerns", icon: Tag },
@@ -2886,7 +3176,7 @@ export default function AdminApp() {
           {tab === "categories" && <CategoriesTab />}
           {tab === "orders" && <OrdersTab />}
           {tab === "coupons" && <CouponsTab />}
-          {tab === "announcements" && <AnnouncementsTab />}
+          {/* {tab === "announcements" && <AnnouncementsTab />} */}
           {tab === "users" && <UsersTab />}
           {tab === "offers" && <OffersTab />}
           {tab === "concerns" && <ConcernsTab />}

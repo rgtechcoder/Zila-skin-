@@ -31,7 +31,8 @@ const emptyAddress: SavedAddress = {
 };
 
 export default function UserDashboard() {
-  const userEmail = localStorage.getItem("zila_user_email");
+  // Use sessionStorage as fallback for login persistence
+  const userEmail = localStorage.getItem("zila_user_email") || sessionStorage.getItem("zila_user_email");
   const [tab, setTab] = useState<"orders" | "address" | "tracking">("orders");
   const [orders, setOrders] = useState<FirestoreOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function UserDashboard() {
   function handleLogout() {
     localStorage.removeItem("zila_user_email");
     localStorage.removeItem("zila_saved_address");
+    sessionStorage.removeItem("zila_user_email");
     window.location.hash = "#home";
   }
 
@@ -151,8 +153,8 @@ export default function UserDashboard() {
           {(
             [
               { key: "orders", label: "Orders", icon: Package },
-              { key: "address", label: "Saved Address", icon: MapPin },
               { key: "tracking", label: "Track Order", icon: Truck },
+              { key: "address", label: "Saved Address", icon: MapPin },
             ] as const
           ).map(({ key, label, icon: Icon }) => (
             <button

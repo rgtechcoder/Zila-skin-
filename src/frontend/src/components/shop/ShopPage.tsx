@@ -57,9 +57,10 @@ function mapProduct(p: FirestoreProduct): Product {
     image: p.imageUrl,
     badge: p.badge ?? "",
     skinType: p.skinType ?? "All Skin",
-    concern: p.concern ?? "All",
+    concern: Array.isArray(p.concerns) ? (p.concerns[0] ?? "All") : (p.concern ?? "All"),
     category: p.category,
     stock: p.stock,
+    concerns: p.concerns ?? (p.concern ? [p.concern] : []),
   };
 }
 
@@ -234,7 +235,7 @@ function ShopProductCard({
               {product.name}
             </h3>
           </button>
-          <p className="text-[10px] sm:text-xs text-brand-text-muted line-clamp-1">
+          <p className="text-[10px] sm:text-xs text-brand-text-muted line-clamp-3">
             {product.desc}
           </p>
           <div className="flex items-center gap-1">
@@ -393,7 +394,7 @@ function ShopPage() {
   if (skinType !== "All Skin")
     filtered = filtered.filter((p) => p.skinType === skinType);
   if (concern !== "All")
-    filtered = filtered.filter((p) => p.concern === concern);
+    filtered = filtered.filter((p) => Array.isArray(p.concerns) ? p.concerns.includes(concern) : p.concern === concern);
   if (priceRange === "Under ₹500")
     filtered = filtered.filter((p) => p.price < 500);
   else if (priceRange === "₹500–₹1000")
@@ -466,7 +467,6 @@ function ShopPage() {
         <div className="hidden md:flex items-center justify-between bg-white rounded-2xl shadow-sm border border-border/50 px-5 py-3.5">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="flex items-center gap-2 text-sm font-semibold text-brand-text mr-2">
-          className="bg-brand-bg min-h-screen overflow-x-hidden mt-16 sm:mt-20 lg:mt-24"
               Filters
             </span>
             <FilterSelect

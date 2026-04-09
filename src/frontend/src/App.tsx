@@ -6,7 +6,7 @@ import CartPage from "./components/cart/CartPage";
 import CheckoutPage from "./components/checkout/CheckoutPage";
 // import AboutSection from "./components/homepage/AboutSection";
 import ProductFeatures from "./components/homepage/ProductFeatures";
-import AnnouncementBar from "./components/homepage/AnnouncementBar";
+// import AnnouncementBar from "./components/homepage/AnnouncementBar";
 import BestsellersSection from "./components/homepage/BestsellersSection";
 import CategoryCards from "./components/homepage/CategoryCards";
 import Footer from "./components/homepage/Footer";
@@ -113,6 +113,18 @@ export default function App() {
   const [page, setPage] = useState<Page>(getPage);
   const [activeSection, setActiveSection] = useState("home");
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Keyboard shortcut: Ctrl+Shift+A to open admin panel
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        window.location.hash = '#admin';
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Force homepage on initial load (refresh) if not a full-page
   useEffect(() => {
@@ -245,7 +257,7 @@ export default function App() {
       <CartProvider>
         <div className="min-h-screen bg-brand-bg font-sans">
           <OfferBanner />
-          <AnnouncementBar />
+          {/* <AnnouncementBar /> */}
           <AnimatePresence mode="wait">
             {page === "cart" ? (
               <motion.div

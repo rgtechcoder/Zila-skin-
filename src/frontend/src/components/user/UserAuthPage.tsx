@@ -1,12 +1,13 @@
 import Footer from "@/components/homepage/Footer";
+import GoogleLoginButton from "./GoogleLoginButton";
 import Navbar from "@/components/homepage/Navbar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-} from "@/lib/auth";
+  firebaseCreateUserWithEmailAndPassword as createUserWithEmailAndPassword,
+  firebaseSendPasswordResetEmail as sendPasswordResetEmail,
+  firebaseSignInWithEmailAndPassword as signInWithEmailAndPassword,
+} from "@/lib/auth-firebase";
 import { saveUser } from "@/lib/firestore";
 import { Eye, EyeOff, Lock, Mail, MapPin, User } from "lucide-react";
 import { useState } from "react";
@@ -85,9 +86,21 @@ export default function UserAuthPage() {
       <main className="flex items-center justify-center px-4 py-16 lg:py-24">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-3xl shadow-card p-8 sm:p-10">
+            {/* Google Login Button hidden for now */}
+            {/*
+            {mode !== "forgot" && (
+              <GoogleLoginButton
+                onSuccess={(user) => {
+                  localStorage.setItem("zila_user_email", user.email);
+                  window.location.hash = "#dashboard";
+                }}
+                onError={(err) => setError("Google sign-in failed. Please try again.")}
+              />
+            )}
+            */}
             <div className="text-center mb-8">
               <img
-                src="/assets/uploads/upscalemedia-transformed_8-019d21a0-d4fc-7717-b25a-5233f768c25c-1.png"
+                src="/logo.png"
                 alt="Zila Skin"
                 className="h-12 w-auto object-contain mx-auto mb-4"
               />

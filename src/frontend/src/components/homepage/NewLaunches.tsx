@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import ProductCard from "./ProductCard";
-import type { Product } from "./ProductCard";
+import { useNewLaunches } from "@/hooks/useNewLaunches";
 
 function SkeletonCard() {
   return (
@@ -19,59 +19,24 @@ function SkeletonCard() {
 
 export default function NewLaunches() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { newLaunches } = useNewLaunches();
+  // newLaunches already filtered by hook
 
-  // Static New Seller (Ns) images from public folder
-  // Update with actual product names as seen on images
-  const staticNS = [
-    {
-      id: 2001,
-      name: "5% Cream",
-      desc: "5% Cream",
-      price: 0,
-      originalPrice: 0,
-      rating: 5,
-      reviews: 0,
-      imageSeed: "ns-1",
-      imageUrl: "/Ns 1.jpg",
-      badge: "New Seller",
-    },
-    {
-      id: 2002,
-      name: "Hydra Gel",
-      desc: "Hydra Gel",
-      price: 0,
-      originalPrice: 0,
-      rating: 5,
-      reviews: 0,
-      imageSeed: "ns-2",
-      imageUrl: "/Ns 2.jpg",
-      badge: "New Seller",
-    },
-    {
-      id: 2003,
-      name: "Face Wash",
-      desc: "Face Wash",
-      price: 0,
-      originalPrice: 0,
-      rating: 5,
-      reviews: 0,
-      imageSeed: "ns-3",
-      imageUrl: "/Ns 3.jpg",
-      badge: "New Seller",
-    },
-    {
-      id: 2004,
-      name: "SPF 50",
-      desc: "SPF 50",
-      price: 0,
-      originalPrice: 0,
-      rating: 5,
-      reviews: 0,
-      imageSeed: "ns-4",
-      imageUrl: "/Ns 4.jpg",
-      badge: "New Seller",
-    },
-  ];
+  // Map FirestoreProduct to ProductCard type
+  function mapToProductCard(p: any, i: number) {
+    return {
+      id: p.id || i,
+      name: p.name,
+      desc: p.description || p.desc || "",
+      price: p.price,
+      originalPrice: p.originalPrice,
+      rating: p.rating ?? 5,
+      reviews: p.reviews ?? 0,
+      imageSeed: p.id || p.name || String(i),
+      imageUrl: p.newLaunchImage || p.imageUrl,
+      badge: p.badge || "New Launch",
+    };
+  }
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
@@ -122,10 +87,11 @@ export default function NewLaunches() {
           </div>
         </div>
 
+
         {/* Mobile: 2-column grid */}
         <div className="grid grid-cols-2 gap-3 sm:hidden">
-          {staticNS.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i + 1} />
+          {newLaunches.map((p, i) => (
+            <ProductCard key={p.id || i} product={mapToProductCard(p, i)} index={i + 1} />
           ))}
         </div>
 
@@ -134,12 +100,12 @@ export default function NewLaunches() {
           ref={scrollRef}
           className="hidden sm:flex gap-5 overflow-x-auto scrollbar-hide pb-2"
         >
-          {staticNS.map((p, i) => (
+          {newLaunches.map((p, i) => (
             <div
-              key={p.id}
+              key={p.id || i}
               className="min-w-[300px] sm:min-w-[340px] lg:min-w-[370px] flex-shrink-0"
             >
-              <ProductCard product={p} index={i + 1} />
+              <ProductCard product={mapToProductCard(p, i)} index={i + 1} />
             </div>
           ))}
         </div>

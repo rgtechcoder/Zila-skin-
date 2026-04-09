@@ -7,34 +7,36 @@ export interface FirestoreConcern {
   description?: string;
 }
 
+import {
+  getCategoriesFirestore,
+  addCategoryFirestore,
+  updateCategoryFirestore,
+  deleteCategoryFirestore,
+  getConcernsFirestore,
+  addConcernFirestore,
+  updateConcernFirestore,
+  deleteConcernFirestore,
+  getOrdersFirestore,
+  addOrderFirestore,
+  updateOrderFirestore,
+  deleteOrderFirestore,
+  getCouponsFirestore,
+  addCouponFirestore,
+  updateCouponFirestore,
+  deleteCouponFirestore,
+} from "./firestore-collections-firebase";
+
 export const getConcerns = async (): Promise<FirestoreConcern[]> => {
-  return readCollection<FirestoreConcern>("concerns");
+  return getConcernsFirestore();
 };
-
 export const addConcern = async (c: Omit<FirestoreConcern, "id">) => {
-  const concerns = readCollection<FirestoreConcern>("concerns");
-  const item = { ...c, id: genId() };
-  writeCollection("concerns", [...concerns, item]);
-  return item;
+  return addConcernFirestore(c);
 };
-
-export const updateConcern = async (
-  id: string,
-  c: Partial<FirestoreConcern>,
-) => {
-  const concerns = readCollection<FirestoreConcern>("concerns");
-  writeCollection(
-    "concerns",
-    concerns.map((x) => (x.id === id ? { ...x, ...c } : x)),
-  );
+export const updateConcern = async (id: string, c: Partial<FirestoreConcern>) => {
+  return updateConcernFirestore(id, c);
 };
-
 export const deleteConcern = async (id: string) => {
-  const concerns = readCollection<FirestoreConcern>("concerns");
-  writeCollection(
-    "concerns",
-    concerns.filter((x) => x.id !== id),
-  );
+  return deleteConcernFirestore(id);
 };
 // ---- Announcements ----
 export interface FirestoreAnnouncement {
@@ -112,6 +114,8 @@ export interface FirestoreProduct {
   rating?: number;
   reviews?: number;
   showsIn?: string[];
+  bestsellerImage?: string; // custom image for bestseller section
+  newLaunchImage?: string; // custom image for new launch section
 }
 
 export interface FirestoreCategory {
@@ -119,6 +123,7 @@ export interface FirestoreCategory {
   name: string;
   slug: string;
   imageUrl?: string;
+  order?: number;
 }
 
 export interface FirestoreOrder {
@@ -166,130 +171,89 @@ export interface FirestoreCoupon {
 }
 
 // ---- Products ----
+import {
+  getProductsFirestore,
+  addProductFirestore,
+  updateProductFirestore,
+  deleteProductFirestore,
+} from "./firestore-firebase";
+
 export const getProducts = async (): Promise<FirestoreProduct[]> => {
-  return readCollection<FirestoreProduct>("products");
+  return getProductsFirestore();
 };
 
 export const addProduct = async (p: Omit<FirestoreProduct, "id">) => {
-  const products = readCollection<FirestoreProduct>("products");
-  const item = { ...p, id: genId() };
-  writeCollection("products", [...products, item]);
-  return item;
+  return addProductFirestore(p);
 };
 
 export const updateProduct = async (
   id: string,
   p: Partial<FirestoreProduct>,
 ) => {
-  const products = readCollection<FirestoreProduct>("products");
-  writeCollection(
-    "products",
-    products.map((x) => (x.id === id ? { ...x, ...p } : x)),
-  );
+  return updateProductFirestore(id, p);
 };
 
 export const deleteProduct = async (id: string) => {
-  const products = readCollection<FirestoreProduct>("products");
-  writeCollection(
-    "products",
-    products.filter((x) => x.id !== id),
-  );
+  return deleteProductFirestore(id);
 };
 
 // ---- Categories ----
 export const getCategories = async (): Promise<FirestoreCategory[]> => {
-  return readCollection<FirestoreCategory>("categories");
+  return getCategoriesFirestore();
 };
-
 export const addCategory = async (c: Omit<FirestoreCategory, "id">) => {
-  const cats = readCollection<FirestoreCategory>("categories");
-  const item = { ...c, id: genId() };
-  writeCollection("categories", [...cats, item]);
-  return item;
+  return addCategoryFirestore(c);
 };
-
-export const updateCategory = async (
-  id: string,
-  c: Partial<FirestoreCategory>,
-) => {
-  const cats = readCollection<FirestoreCategory>("categories");
-  writeCollection(
-    "categories",
-    cats.map((x) => (x.id === id ? { ...x, ...c } : x)),
-  );
+export const updateCategory = async (id: string, c: Partial<FirestoreCategory>) => {
+  return updateCategoryFirestore(id, c);
 };
-
 export const deleteCategory = async (id: string) => {
-  const cats = readCollection<FirestoreCategory>("categories");
-  writeCollection(
-    "categories",
-    cats.filter((x) => x.id !== id),
-  );
+  return deleteCategoryFirestore(id);
 };
 
 // ---- Orders ----
 export const getOrders = async (): Promise<FirestoreOrder[]> => {
-  const orders = readCollection<FirestoreOrder>("orders");
-  return [...orders].reverse();
+  return getOrdersFirestore();
+};
+export const saveOrder = async (order: Omit<FirestoreOrder, "id" | "createdAt">) => {
+  return addOrderFirestore(order);
+};
+export const updateOrder = async (id: string, data: Partial<FirestoreOrder>) => {
+  return updateOrderFirestore(id, data);
+};
+export const deleteOrder = async (id: string) => {
+  return deleteOrderFirestore(id);
 };
 
-export const saveOrder = async (
-  order: Omit<FirestoreOrder, "id" | "createdAt">,
-) => {
-  const orders = readCollection<FirestoreOrder>("orders");
-  const item: FirestoreOrder = {
-    ...order,
-    id: genId(),
-    createdAt: new Date().toISOString(),
-  };
-  writeCollection("orders", [...orders, item]);
-  return item;
-};
+// ---- User Orders ----
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import FIREBASE_CONFIG from '../firebase';
+import { initializeApp } from 'firebase/app';
 
-export const updateOrder = async (
-  id: string,
-  data: Partial<FirestoreOrder>,
-) => {
-  const orders = readCollection<FirestoreOrder>("orders");
-  writeCollection(
-    "orders",
-    orders.map((x) => (x.id === id ? { ...x, ...data } : x)),
-  );
-};
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getFirestore(app);
 
-export const getUserOrders = async (
-  email: string,
-): Promise<FirestoreOrder[]> => {
-  const orders = readCollection<FirestoreOrder>("orders");
-  return [...orders].filter((o) => o.userInfo?.email === email).reverse();
+/**
+ * Get orders for a specific user email from Firestore
+ */
+export const getUserOrders = async (email: string): Promise<FirestoreOrder[]> => {
+  const q = query(collection(db, 'orders'), where('userInfo.email', '==', email));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FirestoreOrder[];
 };
 
 // ---- Coupons ----
 export const getCoupons = async (): Promise<FirestoreCoupon[]> => {
-  return readCollection<FirestoreCoupon>("coupons");
+  return getCouponsFirestore();
 };
-
 export const addCoupon = async (c: Omit<FirestoreCoupon, "id">) => {
-  const coupons = readCollection<FirestoreCoupon>("coupons");
-  const item = { ...c, id: genId() };
-  writeCollection("coupons", [...coupons, item]);
-  return item;
+  return addCouponFirestore(c);
 };
-
 export const updateCoupon = async (id: string, c: Partial<FirestoreCoupon>) => {
-  const coupons = readCollection<FirestoreCoupon>("coupons");
-  writeCollection(
-    "coupons",
-    coupons.map((x) => (x.id === id ? { ...x, ...c } : x)),
-  );
+  return updateCouponFirestore(id, c);
 };
-
 export const deleteCoupon = async (id: string) => {
-  const coupons = readCollection<FirestoreCoupon>("coupons");
-  writeCollection(
-    "coupons",
-    coupons.filter((x) => x.id !== id),
-  );
+  return deleteCouponFirestore(id);
 };
 
 export const validateCoupon = async (

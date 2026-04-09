@@ -1,7 +1,10 @@
 import CartDrawer from "@/components/cart/CartDrawer";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
-import { Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { Heart, Menu, Search, X } from "lucide-react";
+import PremiumCartIcon from "@/components/ui/PremiumCartIcon";
+import PremiumUserIcon from "@/components/ui/PremiumUserIcon";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -20,12 +23,15 @@ export default function Navbar({ currentPage, activeSection }: any) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const { totalCount } = useCart();
   const { items: wishItems } = useWishlist();
   const wishCount = wishItems.length;
+  const { products } = useProducts();
 
-  const isLoggedIn = !!localStorage.getItem("zila_user_email");
+  // Use sessionStorage as fallback for login persistence
+  const isLoggedIn = !!(localStorage.getItem("zila_user_email") || sessionStorage.getItem("zila_user_email"));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -36,6 +42,9 @@ export default function Navbar({ currentPage, activeSection }: any) {
   function handleNavClick(e: any, href: string) {
     e.preventDefault();
     setMobileOpen(false);
+    // Persist login state in sessionStorage if present
+    const email = localStorage.getItem("zila_user_email");
+    if (email) sessionStorage.setItem("zila_user_email", email);
     window.location.hash = href;
   }
 
@@ -59,7 +68,7 @@ export default function Navbar({ currentPage, activeSection }: any) {
             className="hidden lg:flex items-center cursor-pointer mr-4"
             onClick={handleLogoClick}
           >
-            <img src="/logo.png" className="h-12 w-auto object-contain" />
+            <img src="/logo.png" className="h-16 w-auto object-contain" />
           </div>
 
           {/* MOBILE MENU BUTTON */}
@@ -91,11 +100,17 @@ export default function Navbar({ currentPage, activeSection }: any) {
 
           {/* ICONS */}
           <div className="flex items-center gap-4 ml-auto">
-            <Search size={20} className="hidden lg:block" />
-            <User size={20} className="hidden lg:block" />
-            <Heart size={20} className="hidden lg:block" />
+            <button onClick={() => setSearchOpen(true)} className="hidden lg:block">
+              <Search size={20} />
+            </button>
+            <button onClick={() => window.location.hash = '#login'} className="hidden lg:block">
+              <PremiumUserIcon size={24} />
+            </button>
+            <button onClick={() => window.location.hash = '#wishlist'} className="hidden lg:block">
+              <Heart size={20} />
+            </button>
             <button onClick={() => setCartOpen(true)} className="relative">
-              <ShoppingBag size={20} />
+              <PremiumCartIcon size={24} />
               {totalCount > 0 && (
                 <span className="absolute -top-2 -right-2 text-xs bg-pink-500 text-white w-5 h-5 flex items-center justify-center rounded-full">
                   {totalCount}
@@ -107,14 +122,70 @@ export default function Navbar({ currentPage, activeSection }: any) {
 
         {/* SEARCH */}
         <AnimatePresence>
-          {searchOpen && (
-            <motion.div className="px-4 pb-3">
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search..."
-                className="w-full border rounded-full px-4 py-2"
-              />
+            {searchOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                className="fixed top-0 left-0 w-full z-[10000] bg-white/95 shadow-lg flex flex-col px-0 py-0"
+                style={{ minHeight: '64px' }}
+              >
+              <div className="flex items-center px-6 py-4 gap-4">
+                <Search size={24} className="text-gray-500 mr-2" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search for products..."
+                  className="flex-1 text-lg border-none outline-none bg-transparent placeholder:text-gray-500"
+                  style={{ minWidth: 0 }}
+                  autoFocus
+                />
+                <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} className="ml-2 p-2 rounded-full hover:bg-gray-100 transition">
+                  <X size={28} />
+                </button>
+              </div>
+              {/* Suggestions Dropdown */}
+              {searchQuery.trim() && (
+                <div className="w-full max-w-2xl mx-auto bg-white rounded-b-2xl shadow-lg border-t border-gray-100 overflow-y-auto max-h-96 z-[9999]">
+                  {products.length === 0 ? (
+                    <div className="p-6 text-center text-gray-400">Loading...</div>
+                  ) : (
+                    (() => {
+                      const q = searchQuery.trim().toLowerCase();
+                      const filtered = products.filter(p =>
+                        (p.name && p.name.toLowerCase().includes(q)) ||
+                        (p.description && p.description.toLowerCase().includes(q)) ||
+                        (p.category && p.category.toLowerCase().includes(q)) ||
+                        (Array.isArray(p.concerns) && p.concerns.join(" ").toLowerCase().includes(q))
+                      );
+                      return filtered.length === 0
+                        ? <div className="p-6 text-center text-gray-400">No products found</div>
+                        : <ul>
+                            {filtered.slice(0, 8).map(prod => (
+                              <li
+                                key={prod.id}
+                                className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition"
+                                onClick={() => {
+                                  setSearchOpen(false);
+                                  setSearchQuery("");
+                                  window.location.hash = `#product?id=${prod.id}`;
+                                }}
+                              >
+                                <img src={prod.imageUrl || "/logo.png"} alt={prod.name} className="w-12 h-12 object-cover rounded-lg border bg-gray-100" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-brand-text truncate">{prod.name}</div>
+                                  <div className="text-xs text-gray-500 truncate">{prod.category}</div>
+                                </div>
+                                <div className="font-semibold text-brand-pink text-base">₹{prod.price}</div>
+                              </li>
+                            ))}
+                          </ul>;
+                    })()
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -132,6 +203,15 @@ export default function Navbar({ currentPage, activeSection }: any) {
                 <div />
               </div>
 
+              {/* Top right icons for mobile menu */}
+              <div className="flex justify-end gap-3 mb-4">
+                <button onClick={() => { setSearchOpen(true); setMobileOpen(false); }} className="p-2 rounded-full bg-gray-100">
+                  <Search size={22} />
+                </button>
+                <button onClick={() => window.location.hash = '#wishlist'} className="p-2 rounded-full bg-gray-100 mr-2">
+                  <Heart size={22} />
+                </button>
+              </div>
               <div className="flex flex-col p-6 gap-4">
                 {navLinks.map((link) => (
                   <a
@@ -143,6 +223,35 @@ export default function Navbar({ currentPage, activeSection }: any) {
                     {link.label}
                   </a>
                 ))}
+              </div>
+              <div className="flex flex-col items-center gap-4 mt-10">
+                {!isLoggedIn ? (
+                  <button
+                    onClick={() => { window.location.hash = '#login'; setMobileOpen(false); }}
+                    className="w-full py-3 rounded-full bg-gradient-to-r from-[#F1267A] to-[#9B59B6] text-white font-semibold shadow-md hover:opacity-90 active:scale-95 transition-all duration-200 text-lg"
+                  >
+                    Login
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { window.location.hash = '#dashboard'; setMobileOpen(false); }}
+                    className="w-full py-3 rounded-full bg-gradient-to-r from-[#F1267A] to-[#9B59B6] text-white font-semibold shadow-md hover:opacity-90 active:scale-95 transition-all duration-200 text-lg"
+                  >
+                    Dashboard
+                  </button>
+                )}
+                <button
+                  onClick={() => { setCartOpen(true); setMobileOpen(false); }}
+                  className="w-full py-3 rounded-full bg-white text-brand-pink font-semibold shadow-md border border-brand-pink hover:bg-pink-50 active:scale-95 transition-all duration-200 text-lg flex items-center justify-center gap-2"
+                >
+                  <PremiumCartIcon size={22} />
+                  View Bag
+                  {totalCount > 0 && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-pink-500 text-white text-xs font-bold">
+                      {totalCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </motion.div>
           )}
